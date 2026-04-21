@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Информатика: Деление на пары</title>
+    <script src="https://cdn.ably.com/lib/ably.min-1.js"></script>
+    <style>
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #f0f2f5; height: 100vh; overflow: hidden; }
+        #login-overlay { position: fixed; inset: 0; background: white; z-index: 100; display: flex; align-items: center; justify-content: center; }
+        .box { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; width: 400px; }
+        .emoji-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin: 20px 0; max-height: 200px; overflow-y: auto; padding: 10px; border: 1px solid #eee; }
+        .emoji-item { font-size: 2rem; cursor: pointer; border: 2px solid transparent; border-radius: 10px; }
+        .emoji-item.selected { border-color: #007bff; background: #e7f1ff; }
+        .emoji-item.taken { opacity: 0.1; pointer-events: none; }
+        
+        .layout { display: flex; flex-direction: column; height: 100vh; padding: 20px; box-sizing: border-box; }
+        #list { height: 15vh; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; background: white; border-radius: 15px; margin-bottom: 20px; padding: 10px; border: 1px solid #ddd; }
+        .badge { background: #eee; padding: 5px 15px; border-radius: 20px; display: flex; align-items: center; gap: 5px; font-weight: bold; }
+        
+        #pairs { flex-grow: 1; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; align-content: center; }
+        .card { background: white; border-radius: 25px; height: 180px; display: flex; justify-content: space-around; align-items: center; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .unit span { font-size: 80px; display: block; }
+        .unit b { font-size: 1.2rem; }
+        
+        button { padding: 15px 30px; background: #28a745; color: white; border: none; border-radius: 50px; cursor: pointer; font-size: 1.2rem; font-weight: bold; }
+        #admin { position: fixed; bottom: 20px; right: 20px; }
+    </style>
+</head>
+<body>
+
+<div id="login-overlay">
+    <div class="box">
+        <h2>Вход в класс</h2>
+        <input type="text" id="nick" placeholder="Имя" style="width:90%; padding:10px; font-size:1.1rem;">
+        <div class="emoji-grid" id="picker"></div>
+        <button onclick="start()">Войти</button>
+    </div>
+</div>
+
+<div class="layout">
+    <div id="list"></div>
+    <div id="pairs"></div>
+</div>
+
+<div id="admin">
+    <button onclick="split()">Разделить на пары</button>
+</div>
+
+<script>
+    const KEY = '37E7Iw.AUJ_Sg:bD62PMW4whMup4RjEE2QsyyOSZRRmWHjPP2SW1d-7jE';
+    const EMOJIS = ['🚀', '🤖', '👾', '💎', '🔥', '🌈', '🎨', '🧩', '🎸', '🦖', '🦁', '🐱', '🍕', '🌍', '⚡', '🕶️', '👑', '🏀', '🍀', '🍎', '🦊', '🦄', '🐳', '🚁', '🏆'];
+    let ably, chan, me = null;
+
+    // Инициализация эмодзи
+    const p = document.getElementById('picker');
+    EMOJIS.forEach(e => {
+        const s = document.createElement('span');
+        s.className = 'emoji-item';
+        s.innerText = e;
+        s.onclick = () => {
+            document.querySelectorAll('.emoji-item').forEach(x => x.classList.remove('selected'));
+            s.classList.add('selected');
+            me = { emoji: e };
+        };
+        p.appendChild(s);
+    });
+
+    async function start() {
+        const name = document.getElementById('nick').value.trim();
+        if (!name || !me) return alert("Имя и эмодзи!");
+        me.name = name;
+
+        // Принудительно используем только WebSockets для обхода некоторых блоков
+        ably = new Ably.Realtime({ key: KEY, transports: ['web_socket'] });
+        
+        ably.connection.on('connected', () => console.log("✅ Соединение установлено"));
+        ably.connection.on('failed', (err) => alert("❌ Ошибка ключа: " + err.reason));
+
+        chan = ably.channels.get('class-v1');
+        
+        await chan.presence.enter(me);
+        
+        chan.presence.subscribe(() => sync());
+        chan.subscribe('go', (msg) => draw(msg.data));
+        
+        sync();
+        document.getElementById('login-overlay').style.display = 'none';
+    }
+
+    async function sync() {
+        const members = await chan.presence.get();
+        const list = document.getElementById('list');
+        list.innerHTML = '';
+        const items = document.querySelectorAll('.emoji-item');
+        items.forEach(i => i.classList.remove('taken'));
+
+        members.forEach(m => {
+            list.innerHTML += `<div class="badge"><span>${m.data.emoji}</span> ${m.data.name}</div>`;
+            items.forEach(i => { if(i.innerText === m.data.emoji) i.classList.add('taken'); });
+        });
+    }
+
+    async function split() {
+        const members = await chan.presence.get();
+        if (members.length < 2) return;
+        let s = members.map(m => m.data).sort(() => Math.random() - 0.5);
+        let res = [];
+        for (let i = 0; i < s.length; i += 2) {
+            res.push([s[i], s[i+1] || {name: "?", emoji: "👤"}]);
+        }
+        chan.publish('go', res);
+    }
+
+    function draw(data) {
+        const div = document.getElementById('pairs');
+        div.innerHTML = '';
+        data.forEach(p => {
+            div.innerHTML += `
+                <div class="card">
+                    <div class="unit"><span>${p[0].emoji}</span><b>${p[0].name}</b></div>
+                    <div style="color:red; font-weight:900">И</div>
+                    <div class="unit"><span>${p[1].emoji}</span><b>${p[1].name}</b></div>
+                </div>`;
+        });
+    }
+</script>
+</body>
+</html>
