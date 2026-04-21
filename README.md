@@ -1,0 +1,2 @@
+# delenie
+work in group
