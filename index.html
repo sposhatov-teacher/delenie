@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Деление на пары - Информатика</title>
+    <script src="https://cdn.ably.com/lib/ably.min-1.js"></script>
+    <style>
+        :root {
+            --bg-color: #f4f7f6;
+            --accent: #007bff;
+            --success: #28a745;
+        }
+
+        body, html {
+            margin: 0; padding: 0;
+            height: 100vh; width: 100vw;
+            overflow: hidden;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-color);
+        }
+
+        /* Окно входа */
+        #login-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #ffffff;
+            display: flex; justify-content: center; align-items: center;
+            z-index: 1000;
+        }
+
+        .login-box {
+            background: white; padding: 40px; border-radius: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            text-align: center; width: 450px;
+        }
+
+        .emoji-picker {
+            display: grid; grid-template-columns: repeat(5, 1fr);
+            gap: 12px; margin: 25px 0;
+            max-height: 250px; overflow-y: auto; padding: 10px;
+            border: 1px solid #eee; border-radius: 15px;
+        }
+
+        .emoji-item {
+            font-size: 2.5rem; cursor: pointer; border-radius: 15px;
+            transition: all 0.2s; border: 2px solid transparent;
+            display: flex; justify-content: center; align-items: center;
+        }
+
+        .emoji-item:hover { transform: scale(1.15); background: #f0f0f0; }
+        .emoji-item.selected { border-color: var(--accent); background: #e7f1ff; }
+        .emoji-item.taken { opacity: 0.15; pointer-events: none; filter: grayscale(1); }
+
+        /* Основная сетка */
+        .main-layout {
+            display: flex; flex-direction: column; height: 100vh; padding: 20px; box-sizing: border-box;
+        }
+
+        #user-list {
+            height: 18vh; display: flex; flex-wrap: wrap; gap: 12px;
+            justify-content: center; align-content: center;
+            background: white; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            margin-bottom: 20px; padding: 10px;
+        }
+
+        .user-badge {
+            background: #eef2f3; padding: 8px 18px; border-radius: 50px;
+            display: flex; align-items: center; gap: 10px; font-weight: 600;
+            border: 1px solid #ddd; font-size: 1.1rem;
+        }
+
+        /* Отображение пар */
+        #pairs-display {
+            flex-grow: 1; display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px; overflow-y: auto; padding: 10px;
+            align-content: center; justify-items: center;
+        }
+
+        .pair-card {
+            background: white; width: 100%; max-width: 400px; height: 220px;
+            border-radius: 30px; display: flex; justify-content: space-evenly;
+            align-items: center; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border: 2px solid #fff; transition: 0.3s;
+        }
+
+        .student-unit { text-align: center; flex: 1; }
+        .student-unit .emoji { font-size: 95px; display: block; line-height: 1; } /* Размер более 15мм */
+        .student-unit .name { font-size: 1.3rem; font-weight: bold; margin-top: 10px; color: #2c3e50; }
+
+        .vs-divider { font-size: 2rem; color: #ff4757; font-weight: 900; padding: 0 10px; }
+
+        /* Кнопка */
+        #admin-panel { position: fixed; bottom: 30px; right: 30px; }
+        .btn-main {
+            padding: 18px 45px; font-size: 1.4rem; border: none; border-radius: 50px;
+            background: var(--success); color: white; cursor: pointer;
+            box-shadow: 0 10px 20px rgba(40, 167, 69, 0.3); font-weight: bold;
+        }
+        .btn-main:active { transform: scale(0.95); }
+    </style>
+</head>
+<body>
+
+<div id="login-overlay">
+    <div class="login-box">
+        <h2 style="margin-top:0; color: #333;">Вход на урок</h2>
+        <input type="text" id="username" placeholder="Ваше имя" 
+               style="width: 85%; padding: 15px; border-radius: 15px; border: 2px solid #ddd; font-size: 1.2rem; outline: none; margin-bottom:10px;">
+        <p style="margin:5px 0; color: #666;">Выберите свободный эмодзи:</p>
+        <div class="emoji-picker" id="picker"></div>
+        <button onclick="joinClass()" style="width: 100%;" class="btn-main">Войти в класс</button>
+    </div>
+</div>
+
+<div class="main-layout">
+    <div id="user-list">
+        <p style="color:#999">Ожидание подключения учеников...</p>
+    </div>
+    <div id="pairs-display"></div>
+</div>
+
+<div id="admin-panel">
+    <button onclick="generatePairs()" class="btn-main">Разделить на пары</button>
+</div>
+
+<script>
+    // --- ДАННЫЕ ---
+    const API_KEY = '37E7Iw.AUJ_Sg:bD62PMW4whMup4RjEE2QsyyOSZRRmWHjPP2SW1d-7jE'; 
+    const EMOJIS = ['🚀', '🤖', '👾', '💎', '🔥', '🌈', '🎨', '🧩', '🎸', '🦖', '🦁', '🐱', '🍕', '🌍', '⚡', '🕶️', '👑', '🏀', '🍀', '🍎', '🦊', '🦄', '🐳', '🚁', '🏆'];
+    
+    let ably, channel, myData = null;
+
+    // Генерация пикера эмодзи
+    const picker = document.getElementById('picker');
+    EMOJIS.forEach(e => {
+        const span = document.createElement('span');
+        span.className = 'emoji-item';
+        span.innerText = e;
+        span.onclick = () => {
+            document.querySelectorAll('.emoji-item').forEach(i => i.classList.remove('selected'));
+            span.classList.add('selected');
+            myData = { emoji: e };
+        };
+        picker.appendChild(span);
+    });
+
+    async function joinClass() {
+        const nameInput = document.getElementById('username').value.trim();
+        if (!nameInput || !myData) return alert("Введите имя и выберите эмодзи!");
+        
+        myData.name = nameInput;
+
+        try {
+            // Подключаемся к Ably
+            ably = new Ably.Realtime({ key: API_KEY });
+            channel = ably.channels.get('informatics-class-room');
+
+            await ably.connection.whenState('connected');
+            
+            // Входим в Presence
+            await channel.presence.enter(myData);
+
+            // Слушаем входящих/выходящих
+            channel.presence.subscribe('enter', refreshStudents);
+            channel.presence.subscribe('leave', refreshStudents);
+            channel.presence.subscribe('present', refreshStudents);
+            
+            // Слушаем команду распределения пар
+            channel.subscribe('shuffle-event', (msg) => {
+                renderPairs(msg.data);
+            });
+
+            // Сразу обновляем список
+            refreshStudents();
+
+            document.getElementById('login-overlay').style.display = 'none';
+        } catch (err) {
+            console.error("Ably Error:", err);
+            alert("Ошибка соединения. Проверьте консоль (F12).");
+        }
+    }
+
+    async function refreshStudents() {
+        const members = await channel.presence.get();
+        const list = document.getElementById('user-list');
+        list.innerHTML = '';
+        
+        // Обновляем занятость эмодзи
+        const items = document.querySelectorAll('.emoji-item');
+        items.forEach(i => i.classList.remove('taken'));
+
+        if(members.length === 0) {
+            list.innerHTML = '<p style="color:#999">Вы первый в классе</p>';
+        }
+
+        members.forEach(m => {
+            const s = m.data;
+            if (s && s.name) {
+                list.innerHTML += `<div class="user-badge"><span>${s.emoji}</span> ${s.name}</div>`;
+                items.forEach(i => {
+                    if (i.innerText === s.emoji) i.classList.add('taken');
+                });
+            }
+        });
+    }
+
+    async function generatePairs() {
+        const members = await channel.presence.get();
+        if (members.length < 2) return alert("Нужно хотя бы 2 человека для пары!");
+
+        // Перемешиваем список
+        let students = members.map(m => m.data).sort(() => Math.random() - 0.5);
+        let pairs = [];
+
+        for (let i = 0; i < students.length; i += 2) {
+            if (students[i + 1]) {
+                pairs.push([students[i], students[i + 1]]);
+            } else {
+                pairs.push([students[i], { name: "Без пары", emoji: "👤" }]);
+            }
+        }
+        // Публикуем результат для всех
+        channel.publish('shuffle-event', pairs);
+    }
+
+    function renderPairs(pairs) {
+        const display = document.getElementById('pairs-display');
+        display.innerHTML = '';
+        pairs.forEach(p => {
+            display.innerHTML += `
+                <div class="pair-card">
+                    <div class="student-unit">
+                        <span class="emoji">${p[0].emoji}</span>
+                        <div class="name">${p[0].name}</div>
+                    </div>
+                    <div class="vs-divider">&</div>
+                    <div class="student-unit">
+                        <span class="emoji">${p[1].emoji}</span>
+                        <div class="name">${p[1].name}</div>
+                    </div>
+                </div>
+            `;
+        });
+    }
+</script>
+</body>
+</html>
