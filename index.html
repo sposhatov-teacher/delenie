@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Пары учеников (Realtime Firebase)</title>
+<style>
+body { margin:0; font-family:Arial; overflow:hidden; }
+
+#topBar {
+  height: 30vh;
+  overflow:hidden;
+  background:#f4f4f4;
+  padding:10px;
+}
+
+#students {
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  justify-content:center;
+}
+
+.student {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  width:70px;
+}
+
+.student .emoji { font-size:40px; }
+
+#controls {
+  text-align:center;
+  padding:10px;
+  display:flex;
+  gap:10px;
+  justify-content:center;
+  flex-wrap:wrap;
+}
+
+button {
+  font-size:18px;
+  padding:10px 20px;
+  cursor:pointer;
+}
+
+#pairs {
+  height: 35vh;
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:20px;
+  padding:10px;
+}
+
+.pair {
+  width:45%;
+  border:2px solid #ddd;
+  border-radius:10px;
+  display:flex;
+  justify-content:space-around;
+  align-items:center;
+  font-size:22px;
+}
+
+.bigEmoji { font-size:60px; }
+
+/* MODAL */
+#modal {
+  position:fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background:white;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  z-index:999;
+}
+
+#emojiGrid {
+  display:grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap:10px;
+  margin-top:20px;
+}
+
+.emojiBtn {
+  font-size:40px;
+  padding:10px;
+  border:2px solid #ccc;
+  border-radius:10px;
+  cursor:pointer;
+}
+
+input {
+  font-size:18px;
+  padding:10px;
+}
+</style>
+</head>
+<body>
+
+<div id="modal">
+  <h2>Введите имя</h2>
+  <input id="nameInput" placeholder="Ваше имя">
+  <h3>Выберите эмодзи</h3>
+  <div id="emojiGrid"></div>
+</div>
+
+<div id="topBar">
+  <h3>Ученики онлайн</h3>
+  <div id="students"></div>
+</div>
+
+<div id="controls">
+  <button onclick="makePairs()">Сформировать пары</button>
+  <button onclick="clearAll()" style="background:#ffdddd">Очистить список</button>
+</div>
+
+<div id="pairs"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, push, onValue, get, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyC-1CH2jaOv6rAkeLfLSzohc7e_10mzc4M",
+  authDomain: "delenie-real.firebaseapp.com",
+  databaseURL: "https://delenie-real-default-rtdb.firebaseio.com",
+  projectId: "delenie-real",
+  storageBucket: "delenie-real.firebasestorage.app",
+  messagingSenderId: "52837234105",
+  appId: "1:52837234105:web:4fb7e3c890d0c6bc78b268",
+  measurementId: "G-FXGELFCY95"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const emojis = [
+"😀","😎","🚀","🔥","🌈","🐱","🐶","🍕","🎮","⚽",
+"🎧","📱","💡","🌟","🧠","🎯","🦄","🍀","🌍","🎲",
+"🧩","📚","🖥️","⌨️","🖱️"
+];
+
+let selectedEmoji = null;
+let userName = "";
+
+const emojiGrid = document.getElementById("emojiGrid");
+
+function renderEmojis(){
+  emojiGrid.innerHTML = "";
+  emojis.forEach(e => {
+    const btn = document.createElement("div");
+    btn.className = "emojiBtn";
+    btn.innerText = e;
+    btn.onclick = () => selectEmoji(e);
+    emojiGrid.appendChild(btn);
+  });
+}
+
+renderEmojis();
+
+async function selectEmoji(e) {
+  const name = document.getElementById("nameInput").value.trim();
+  if (!name) return alert("Введите имя");
+
+  const emojiRef = ref(db, "emojis/" + e);
+  const snap = await get(emojiRef);
+
+  if (snap.exists()) {
+    alert("Эмодзи уже занято");
+    return;
+  }
+
+  await set(emojiRef, true);
+
+  userName = name;
+  selectedEmoji = e;
+
+  const userRef = push(ref(db, "students"));
+  await set(userRef, { name: userName, emoji: selectedEmoji });
+
+  document.getElementById("modal").style.display = "none";
+}
+
+onValue(ref(db,"students"), snap => {
+  const data = snap.val() || {};
+  const box = document.getElementById("students");
+  box.innerHTML = "";
+
+  Object.values(data).forEach(s => {
+    const div = document.createElement("div");
+    div.className = "student";
+    div.innerHTML = `<div class='emoji'>${s.emoji}</div><div>${s.name}</div>`;
+    box.appendChild(div);
+  });
+});
+
+window.makePairs = function() {
+  get(ref(db,"students")).then(snap => {
+    const arr = Object.values(snap.val() || {});
+    arr.sort(()=>Math.random()-0.5);
+
+    const container = document.getElementById("pairs");
+    container.innerHTML = "";
+
+    for (let i=0;i<arr.length;i+=2) {
+      const a = arr[i];
+      const b = arr[i+1];
+
+      const p = document.createElement("div");
+      p.className = "pair";
+
+      p.innerHTML = `
+        <div>
+          <div class='bigEmoji'>${a.emoji}</div>
+          <div>${a.name}</div>
+        </div>
+        <div>
+          ${b ? `<div class='bigEmoji'>${b.emoji}</div><div>${b.name}</div>` : ""}
+        </div>
+      `;
+
+      container.appendChild(p);
+    }
+  });
+}
+
+window.clearAll = async function() {
+  if (!confirm("Очистить всех учеников и эмодзи?")) return;
+
+  await remove(ref(db,"students"));
+  await remove(ref(db,"emojis"));
+
+  document.getElementById("pairs").innerHTML = "";
+}
+</script>
+
+</body>
+</html>
