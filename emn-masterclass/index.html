@@ -196,6 +196,41 @@ body.focus-mode #hostView .grid>.qrpanel,body.focus-mode #hostView .grid>.sideba
 }
 @media(max-width:999px){#hostView .sidebar .control-grid{grid-template-columns:80px minmax(0,1fr) minmax(100px,.8fr)}}
 @media(max-width:550px){#hostView .sidebar .control-grid{grid-template-columns:80px 1fr}#hostView .sidebar .control-main{grid-column:1/-1;flex-direction:row}#hostView .sidebar .control-extra{flex-wrap:wrap}#hostView .sidebar .control-extra>.field{max-width:100%;flex-basis:100%}}
+
+/* Эргономичная сетка управления, все кнопки в пределах блока */
+@media(min-width:1000px){
+#hostView .grid{grid-template-rows:minmax(0,1fr) 158px}
+#hostView .grid>.qrpanel #qr{width:min(calc(100% - 60px),calc(60dvh - 35px),30vw);max-width:100%;height:auto}
+#hostView .sidebar .control-grid{height:100%;display:grid;grid-template-columns:minmax(80px,.65fr) minmax(140px,1.45fr) minmax(125px,1fr);grid-template-rows:minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:stretch}
+#hostView .sidebar .control-grid>.field{justify-content:center;min-width:0}
+#hostView .sidebar .control-grid .control-main{justify-content:center;gap:6px}
+#hostView .sidebar .control-grid .control-extra{grid-column:1/-1;justify-content:space-between;align-items:center;min-height:0}
+#hostView .sidebar .control-grid .control-extra>.field{flex:1 1 50%;max-width:none}
+#hostView .sidebar .control-grid .btn{padding:7px 10px;min-height:30px}
+#hostView .sidebar .control-grid textarea{max-height:54px!important;resize:none}
+}
+@media(min-width:1000px) and (max-height:650px){
+#hostView .grid{grid-template-rows:minmax(0,1fr) 142px}
+#hostView .sidebar .control-grid{gap:5px}
+#hostView .sidebar .control-grid .btn{padding:4px 7px;min-height:25px}
+#hostView .sidebar .control-grid textarea{max-height:40px!important}
+}
+@media(max-width:999px){
+#hostView .sidebar .control-extra{flex-wrap:wrap}
+#hostView .sidebar .control-extra>.field{flex:1 1 100%;max-width:100%}
+}
+.print-qr-sheet{display:none}
+@media screen{
+body:has(.print-qr-sheet){background:#fff;color:#14283c;display:block;overflow:auto}
+body:has(.print-qr-sheet)>.print-qr-sheet{display:flex;max-width:210mm;min-height:270mm;margin:0 auto;flex-direction:column;align-items:center;justify-content:center;gap:35px;text-align:center;padding:30px}
+.print-qr-sheet h1{font-size:32px}.print-qr-sheet p{font-size:20px}
+}
+@media print{
+body:has(.print-qr-sheet){background:white;color:black}
+body:has(.print-qr-sheet)>.print-qr-sheet{display:flex;min-height:250mm;align-items:center;justify-content:center;flex-direction:column;gap:25mm;text-align:center}
+.print-qr-sheet #printQrCode{display:block}
+.print-qr-sheet h1{font-size:30pt}.print-qr-sheet p{font-size:16pt}
+}
 </style>
 </head>
 <body>
@@ -207,8 +242,8 @@ body.focus-mode #hostView .grid>.qrpanel,body.focus-mode #hostView .grid>.sideba
 <div class="field"><label for="names">Названия команд (по одному в строке)</label><textarea id="names" rows="3">Исследователи
 Экспериментаторы
 Аналитики</textarea></div>
-<div class="control-main"><button class="btn primary" id="assign">✦ Распределить заново</button></div>
-<div class="control-extra"><div class="field"><label for="manualName">Псевдоним вручную</label><div class="input-add"><input id="manualName" placeholder="Псевдоним"><button class="btn" id="addManual">+</button></div></div><button id="reset" class="btn small warn">Очистить</button></div>
+<div class="control-main"><button class="btn primary" id="assign">Применить команды</button><button class="btn" id="registrationToggle">Закрыть вход</button></div>
+<div class="control-extra"><div class="field"><label for="manualName">Псевдоним вручную</label><div class="input-add"><input id="manualName" placeholder="Псевдоним"><button class="btn" id="addManual">+</button></div></div><button id="reset" class="btn small warn">Очистить</button><button id="printQR" class="btn small">Печать QR</button></div>
 </div><div id="hostMessage" aria-live="polite"></div></aside></div><div class="footer">Функциональная грамотность учащихся · Мастер-класс для учителей естественно-математического направления</div></main>
 <main id="participantView" class="shell hide"><div class="panel"><div class="participant-logo">🧪</div><div class="eyebrow" style="text-align:center">Мастер-класс для педагогов ЕМН</div><h2 style="text-align:center;margin:10px 0 8px;font-size:31px">Ваша команда</h2><p class="instruction" style="text-align:center">Придумайте псевдоним. После регистрации система автоматически определит вашу команду и покажет её здесь.</p><div id="joinForm"><div class="field"><label for="participantName">Ваш псевдоним</label><input id="participantName" maxlength="32" autocomplete="off" placeholder="Например, Квант, Ньютон, Атом"></div><button id="join" class="btn primary" style="width:100%">Присоединиться</button></div><div id="participantResult" class="hide"></div><div id="participantMessage" aria-live="polite"></div></div></main>
 <div class="modal hide no-print" id="settingsModal"><div class="panel"><div class="flex" style="justify-content:space-between"><h3>Подключение реального времени</h3><button class="btn small ghost" id="closeSettings">✕</button></div><div class="settingsHelp">Для работы через телефоны участников нужна бесплатная база Firebase Realtime Database и включённый анонимный вход. Вставьте JSON-конфигурацию веб-приложения, затем создайте комнату. Полная инструкция и правила безопасности включены в архив.</div><div class="field"><label for="firebaseConfig">Firebase web config (JSON)</label><textarea id="firebaseConfig" rows="9" spellcheck="false" placeholder='{"apiKey":"...","authDomain":"...","databaseURL":"https://...firebaseio.com","projectId":"...","appId":"..."}'></textarea></div><div class="flex"><button id="connect" class="btn primary">Подключить и создать комнату</button><button id="demoMode" class="btn">Демо-режим</button></div><div id="settingsMessage" aria-live="polite"></div><p class="note">Важно: для использования QR входа опубликуйте страницу по HTTPS (например, GitHub Pages). При открытии файла с диска телефоны не смогут открыть ваш локальный адрес.</p></div></div>
@@ -219,13 +254,14 @@ const colors=['#43dfc4','#ffcd77','#88b9ff','#fd93a9','#bba3ff','#a2df89','#ffb4
 const defaultNames=['Исследователи','Экспериментаторы','Аналитики','Новаторы','Практики','Открыватели','Эрудиты','Стратеги'];
 const demoPeople=['Алия А.','Болат К.','Гульмира С.','Данияр Т.','Елена П.','Жанна М.','Зарина А.','Игорь Д.','Камила Р.','Лаура Б.','Марат Н.','Наталья И.'];
 const DEFAULT_FIREBASE_CONFIG={"apiKey":"AIzaSyC-1CH2jaOv6rAkeLfLSzohc7e_10mzc4M","authDomain":"delenie-real.firebaseapp.com","databaseURL":"https://delenie-real-default-rtdb.firebaseio.com","projectId":"delenie-real","appId":"1:52837234105:web:4fb7e3c890d0c6bc78b268"};
-const param=new URLSearchParams(location.search);const joinRoom=param.get('room');const isJoin=!!joinRoom;
+const FIXED_ROOM='EMNMASTERCLASS';
+const param=new URLSearchParams(location.search);const joinRoom=param.get('room');const isJoin=!!joinRoom;const isPrintQR=param.get('print')==='qr';
 let cfg=null,app=null,auth=null,db=null,currentUser=null,room=null,roomCode='',unsub=null,online=false,covered=false,autoAssignBusy=false;
 let local={participants:{},assignments:{},teamNames:defaultNames.slice(0,3),teamCount:3,adminUid:'local'};
 const uid=()=>('m'+Math.random().toString(36).slice(2,11));
 const msg=(el,t,ok=false)=>{el.innerHTML=t?`<div class="notice ${ok?'success':''}">${esc(t)}</div>`:''};
-function render(){const r=room||local,ps=r.participants||{},a=r.assignments||{},people=Object.entries(ps).filter(([,p])=>p&&p.name),total=people.length,assigned=people.filter(([id])=>Number.isInteger(a[id])&&a[id]>=0&&a[id]<r.teamCount).length;$('#total').textContent=total;$('#assigned').textContent=assigned;$('#pending').textContent=total-assigned;$('#stage').textContent=assigned?'Распределение завершено':'Ожидание участников';$('#waitingCount').textContent=(total-assigned)+' человек';const pending=people.filter(([id])=>!Number.isInteger(a[id])||a[id]<0||a[id]>=r.teamCount);$('#waiting').innerHTML=pending.length?pending.map(([,p])=>`<span class="chip">${esc(p.name)}</span>`).join(''):'<span class="empty">Все зарегистрированные участники распределены</span>';$('#teams').innerHTML=Array.from({length:r.teamCount},(_,i)=>{const members=people.filter(([id])=>a[id]===i),name=r.teamNames?.[i]||defaultNames[i];return `<article class="team" style="--team:${colors[i%colors.length]}"><div class="teamhead"><div class="teamtitle">${esc(name)}</div><div class="count">${members.length}</div></div><div class="${covered?'revealMask':''}">${members.length?members.map(([,p])=>`<div class="person"><div class="initial">${esc(p.name.trim().slice(0,1).toUpperCase())}</div><div>${esc(p.name)}</div></div>`).join(''):'<div class="empty">Ожидает распределения</div>'}</div></article>`}).join('');if(isJoin)renderParticipant();}
-function renderParticipant(){if(!currentUser||!room)return;const p=room.participants?.[currentUser.uid];if(!p)return;$('#joinForm').classList.add('hide');$('#participantResult').classList.remove('hide');const i=room.assignments?.[currentUser.uid];$('#participantResult').innerHTML=Number.isInteger(i)&&i>=0&&i<room.teamCount?`<div class="bigresult"><p>Ваша команда определена!</p><strong>${esc(room.teamNames?.[i]||defaultNames[i])}</strong><p>Удачной совместной работы, ${esc(p.name)}!</p></div>`:`<div class="bigresult"><p>Здравствуйте, ${esc(p.name)}!</p><strong>Вы зарегистрированы</strong><p>Ожидайте распределения ведущим.</p></div>`;}
+function render(){const r=room||local,ps=r.participants||{},a=r.assignments||{},people=Object.entries(ps).filter(([,p])=>p&&p.name),total=people.length,assigned=people.filter(([id])=>Number.isInteger(a[id])&&a[id]>=0&&a[id]<r.teamCount).length;$('#total').textContent=total;$('#assigned').textContent=assigned;$('#pending').textContent=total-assigned;$('#stage').textContent=r.registrationOpen===false?'Регистрация закрыта':assigned?'Команды формируются автоматически':'Регистрация открыта';if(!isJoin){const toggle=$('#registrationToggle');if(toggle)toggle.textContent=r.registrationOpen===false?'Открыть вход':'Закрыть вход';}$('#waitingCount').textContent=(total-assigned)+' человек';const pending=people.filter(([id])=>!Number.isInteger(a[id])||a[id]<0||a[id]>=r.teamCount);$('#waiting').innerHTML=pending.length?pending.map(([,p])=>`<span class="chip">${esc(p.name)}</span>`).join(''):'<span class="empty">Все зарегистрированные участники распределены</span>';$('#teams').innerHTML=Array.from({length:r.teamCount},(_,i)=>{const members=people.filter(([id])=>a[id]===i),name=r.teamNames?.[i]||defaultNames[i];return `<article class="team" style="--team:${colors[i%colors.length]}"><div class="teamhead"><div class="teamtitle">${esc(name)}</div><div class="count">${members.length}</div></div><div class="${covered?'revealMask':''}">${members.length?members.map(([,p])=>`<div class="person"><div class="initial">${esc(p.name.trim().slice(0,1).toUpperCase())}</div><div>${esc(p.name)}</div></div>`).join(''):'<div class="empty">Ожидает распределения</div>'}</div></article>`}).join('');if(isJoin)renderParticipant();}
+function renderParticipant(){if(!currentUser||!room)return;const p=room.participants?.[currentUser.uid];if(!p){if(room.registrationOpen===false){$('#joinForm').classList.add('hide');msg($('#participantMessage'),'Регистрация на мастер-класс закрыта.');}return;}$('#joinForm').classList.add('hide');$('#participantResult').classList.remove('hide');const i=room.assignments?.[currentUser.uid];$('#participantResult').innerHTML=Number.isInteger(i)&&i>=0&&i<room.teamCount?`<div class="bigresult"><p>Ваша команда определена!</p><strong>${esc(room.teamNames?.[i]||defaultNames[i])}</strong><p>Удачной совместной работы, ${esc(p.name)}!</p></div>`:`<div class="bigresult"><p>Здравствуйте, ${esc(p.name)}!</p><strong>Вы зарегистрированы</strong><p>Ожидайте распределения ведущим.</p></div>`;}
 function setOnline(v){online=v;$('#statusText').textContent=v?'Связь активна':'Демонстрация';$('.dot').classList.toggle('online',v);$('#qrNote').textContent=v?'Участники могут открыть ссылку или сканировать QR-код.':'Это демонстрационный режим. Для входа с телефонов подключите Firebase.';$('#qrNote').classList.toggle('success',v);}
 function applyConfigToForm(r){if(!r)return;$('#teamCount').value=String(r.teamCount||3);$('#names').value=(r.teamNames||[]).join('\n');}
 function chosenNames(){const n=+$('#teamCount').value;const typed=$('#names').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);return Array.from({length:n},(_,i)=>typed[i]||defaultNames[i]);}
@@ -237,17 +273,59 @@ async function assignment(){if(!checkAdmin())return;try{const r=room||local;cons
 async function manualAdd(name){name=name.trim().replace(/\s+/g,' ').slice(0,50);if(!name)return;const key=uid();try{if(!checkAdmin())return;if(online){const {set,ref}=await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js');await set(ref(db,`rooms/${roomCode}/participants/${key}`),{name,joinedAt:Date.now(),manual:true});}else{local.participants[key]={name,joinedAt:Date.now(),manual:true};render();}$('#manualName').value='';msg($('#hostMessage'),'Участник добавлен.',true)}catch(e){msg($('#hostMessage'),'Не удалось добавить: '+e.message)}}
 function randomCode(){const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';return Array.from({length:6},()=>c[Math.floor(Math.random()*c.length)]).join('')}
 async function loadFirebase(config){const {initializeApp}=await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js');const {getAuth,signInAnonymously,onAuthStateChanged}=await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js');const {getDatabase}=await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js');app=initializeApp(config,'workshop-'+Date.now());auth=getAuth(app);db=getDatabase(app);try{const cred=await signInAnonymously(auth);currentUser=cred.user;}catch(authError){let id=localStorage.getItem('emn-device-id');if(!id){id='device-'+crypto.randomUUID();localStorage.setItem('emn-device-id',id);}currentUser={uid:id};console.warn('Анонимная авторизация недоступна; доступ зависит от правил Firebase.',authError);}return currentUser;}
-async function autoAssignNewcomers(){if(isJoin||autoAssignBusy||!room||!currentUser||room.adminUid!==currentUser.uid)return;const ids=Object.keys(room.participants||{}),a=room.assignments||{},n=Math.max(2,Number(room.teamCount)||3);const newcomers=ids.filter(id=>!Number.isInteger(a[id])||a[id]<0||a[id]>=n);if(!newcomers.length)return;autoAssignBusy=true;try{const next={...a},counts=Array.from({length:n},(_,i)=>ids.filter(id=>next[id]===i).length);for(const id of newcomers){const least=Math.min(...counts),options=counts.map((c,i)=>c===least?i:-1).filter(i=>i>=0),choice=options[Math.floor(Math.random()*options.length)];next[id]=choice;counts[choice]++;}await updateRoom({assignments:next});}catch(e){msg($('#hostMessage'),'Ошибка распределения: '+e.message)}finally{autoAssignBusy=false;}}
+async function autoAssignNewcomers(){if(isJoin||autoAssignBusy||!room||!currentUser||room.adminUid!==currentUser.uid||room.registrationOpen===false)return;const ids=Object.keys(room.participants||{}),a=room.assignments||{},n=Math.max(2,Number(room.teamCount)||3);const newcomers=ids.filter(id=>!Number.isInteger(a[id])||a[id]<0||a[id]>=n);if(!newcomers.length)return;autoAssignBusy=true;try{const next={...a},counts=Array.from({length:n},(_,i)=>ids.filter(id=>next[id]===i).length);for(const id of newcomers){const least=Math.min(...counts),options=counts.map((c,i)=>c===least?i:-1).filter(i=>i>=0),choice=options[Math.floor(Math.random()*options.length)];next[id]=choice;counts[choice]++;}await updateRoom({assignments:next});}catch(e){msg($('#hostMessage'),'Ошибка распределения: '+e.message)}finally{autoAssignBusy=false;}}
 async function listen(code){const {ref,onValue}=await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js');if(unsub)unsub();unsub=onValue(ref(db,'rooms/'+code),s=>{room=s.val();if(room){if(!isJoin){applyConfigToForm(room);render();autoAssignNewcomers();}else renderParticipant();}else if(isJoin){msg($('#participantMessage'),'Комната не найдена или завершена.')}},err=>msg(isJoin?$('#participantMessage'):$('#hostMessage'),'Ошибка доступа к базе: '+err.message));}
-function inviteUrl(){const url=new URL(location.href);url.search='';url.hash='';url.searchParams.set('room',roomCode);url.searchParams.set('cfg',btoa(unescape(encodeURIComponent(JSON.stringify(cfg)))));return url.href;}
-function showQR(){const link=inviteUrl();$('#joinLink').textContent=link;$('#roomId').textContent=roomCode;$('#copy').disabled=false;const el=$('#qr');el.innerHTML='';const size=Math.max(160,Math.min(960,Math.floor(Math.min(el.clientWidth-20,el.clientHeight-20))));if(window.QRCode){new window.QRCode(el,{text:link,width:size,height:size,colorDark:'#0c2738',colorLight:'#ffffff',correctLevel:window.QRCode.CorrectLevel.M});}else{el.innerHTML='<span style="color:#222;font-size:12px">Библиотека QR недоступна. Используйте ссылку.</span>';}}
-async function createOnline(){try{const parsed=JSON.parse($('#firebaseConfig').value);if(!parsed.apiKey||!parsed.databaseURL||!parsed.projectId)throw Error('Не хватает apiKey, databaseURL или projectId.');msg($('#settingsMessage'),'Подключение...');cfg=parsed;await loadFirebase(cfg);const {ref,runTransaction}=await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js');let code,result;for(let n=0;n<8;n++){code=randomCode();result=await runTransaction(ref(db,'rooms/'+code),current=>current===null?{adminUid:currentUser.uid,createdAt:Date.now(),teamCount:+$('#teamCount').value,teamNames:chosenNames(),participants:{},assignments:{}}:undefined,{applyLocally:false});if(result.committed)break;}if(!result?.committed)throw Error('Не удалось создать уникальную комнату.');roomCode=code;localStorage.setItem('emn-firebase-config',JSON.stringify(cfg));localStorage.setItem('emn-room',roomCode);await listen(roomCode);setOnline(true);showQR();$('#settingsModal').classList.add('hide');msg($('#hostMessage'),'Комната создана. Поделитесь QR-кодом.',true);}catch(e){msg($('#settingsMessage'),e.message)}}
-async function restoreHost(){try{const stored=localStorage.getItem('emn-firebase-config'),code=localStorage.getItem('emn-room');if(!stored||!code)return;cfg=JSON.parse(stored);await loadFirebase(cfg);const {get,ref}=await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js');const snap=await get(ref(db,'rooms/'+code));if(!snap.exists()||snap.val().adminUid!==currentUser.uid)throw Error('Восстановить предыдущую комнату не удалось. Можно создать новую.');roomCode=code;room=snap.val();await listen(code);setOnline(true);showQR();msg($('#hostMessage'),'Комната восстановлена после перезагрузки.',true);$('#settingsModal').classList.add('hide');}catch(e){msg($('#settingsMessage'),e.message);$('#settingsModal').classList.remove('hide');}}
-async function joinOnline(){try{const encoded=param.get('cfg');if(!encoded)throw Error('В ссылке отсутствует настройка подключения.');cfg=JSON.parse(decodeURIComponent(escape(atob(encoded))));roomCode=joinRoom;setOnline(false);msg($('#participantMessage'),'Подключение к комнате...');await loadFirebase(cfg);await listen(roomCode);setOnline(true);msg($('#participantMessage'),'');}catch(e){msg($('#participantMessage'),'Не удалось подключиться: '+e.message+'. Попросите ведущего проверить ссылку и Firebase.')}}
+function inviteUrl(){const url=new URL(location.href);url.search='';url.hash='';url.searchParams.set('room',FIXED_ROOM);return url.href;}
+function showQR(){const link=inviteUrl();$('#joinLink').textContent=link;$('#roomId').textContent=roomCode;$('#copy').disabled=false;const el=$('#qr');el.innerHTML='';const size=Math.max(160,Math.min(650,Math.floor(Math.min(el.clientWidth-20,el.clientHeight-20))));if(window.QRCode){new window.QRCode(el,{text:link,width:size,height:size,colorDark:'#0c2738',colorLight:'#ffffff',correctLevel:window.QRCode.CorrectLevel.M});}else{el.innerHTML='<span style="color:#222;font-size:12px">Библиотека QR недоступна. Используйте ссылку.</span>';}}
+async function createOnline(){
+try{
+const parsed=JSON.parse($('#firebaseConfig').value);
+if(!parsed.apiKey||!parsed.databaseURL||!parsed.projectId)throw Error('Не хватает параметров Firebase.');
+msg($('#settingsMessage'),'Подключение постоянной комнаты...');
+cfg=parsed;await loadFirebase(cfg);
+const {ref,runTransaction}=await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js');
+const result=await runTransaction(ref(db,'rooms/'+FIXED_ROOM),old=>{
+if(old!==null)return;
+return {adminUid:currentUser.uid,createdAt:Date.now(),registrationOpen:true,teamCount:+$('#teamCount').value,teamNames:chosenNames(),participants:{},assignments:{}};
+},{applyLocally:false});
+if(!result.snapshot.exists())throw Error('Не удалось открыть постоянную комнату.');
+if(result.snapshot.val().adminUid!==currentUser.uid)throw Error('Постоянная комната уже принадлежит другому ведущему. Откройте страницу на устройстве, на котором её создали.');
+roomCode=FIXED_ROOM;room=result.snapshot.val();
+localStorage.setItem('emn-firebase-config',JSON.stringify(cfg));localStorage.setItem('emn-room',FIXED_ROOM);
+await listen(roomCode);setOnline(true);showQR();$('#settingsModal').classList.add('hide');
+msg($('#hostMessage'),'Постоянная комната открыта. QR-код можно распечатать заранее.',true);
+}catch(e){msg($('#settingsMessage'),e.message)}
+}
+async function restoreHost(){
+try{
+const stored=localStorage.getItem('emn-firebase-config');
+cfg=stored?JSON.parse(stored):DEFAULT_FIREBASE_CONFIG;
+await loadFirebase(cfg);
+const {get,ref}=await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js');
+const snap=await get(ref(db,'rooms/'+FIXED_ROOM));
+if(!snap.exists()){await createOnlineFromReadySession();return;}
+if(snap.val().adminUid!==currentUser.uid)throw Error('Постоянная комната принадлежит другому ведущему. Используйте исходный браузер.');
+roomCode=FIXED_ROOM;room=snap.val();
+localStorage.setItem('emn-room',FIXED_ROOM);
+await listen(FIXED_ROOM);setOnline(true);showQR();
+$('#settingsModal').classList.add('hide');
+}catch(e){msg($('#settingsMessage'),e.message);$('#settingsModal').classList.remove('hide')}
+}
+async function createOnlineFromReadySession(){
+const {ref,runTransaction}=await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js');
+const result=await runTransaction(ref(db,'rooms/'+FIXED_ROOM),old=>old===null?{adminUid:currentUser.uid,createdAt:Date.now(),registrationOpen:true,teamCount:+$('#teamCount').value,teamNames:chosenNames(),participants:{},assignments:{}}:undefined,{applyLocally:false});
+if(!result.snapshot.exists()||result.snapshot.val().adminUid!==currentUser.uid)throw Error('Не удалось создать постоянную комнату.');
+roomCode=FIXED_ROOM;room=result.snapshot.val();
+localStorage.setItem('emn-firebase-config',JSON.stringify(cfg));
+localStorage.setItem('emn-room',FIXED_ROOM);
+await listen(FIXED_ROOM);setOnline(true);showQR();
+$('#settingsModal').classList.add('hide');
+}
+async function joinOnline(){try{const encoded=param.get('cfg');cfg=encoded?JSON.parse(decodeURIComponent(escape(atob(encoded)))):DEFAULT_FIREBASE_CONFIG;roomCode=joinRoom;setOnline(false);msg($('#participantMessage'),'Подключение к комнате...');await loadFirebase(cfg);await listen(roomCode);setOnline(true);msg($('#participantMessage'),'');}catch(e){msg($('#participantMessage'),'Не удалось подключиться: '+e.message+'. Попросите ведущего проверить ссылку и Firebase.')}}
 async function participantJoin(){
 const name=$('#participantName').value.trim().replace(/\s+/g,' ').slice(0,32);
 if(name.length<2){msg($('#participantMessage'),'Введите псевдоним длиной минимум 2 символа.');return}
-if(!online||!room){msg($('#participantMessage'),'Нет соединения с комнатой.');return}
+if(!online||!room){msg($('#participantMessage'),'Нет соединения с комнатой.');return}if(room.registrationOpen===false){msg($('#participantMessage'),'Регистрация на мастер-класс закрыта.');return}
 const button=$('#join');button.disabled=true;
 msg($('#participantMessage'),'Регистрируем и распределяем в команду…');
 try{
@@ -257,7 +335,7 @@ const rootRef=ref(db,'rooms/'+roomCode);
 let result;
 try{
 result=await runTransaction(rootRef,old=>{
-if(!old)return;
+if(!old||old.registrationOpen===false)return;
 old.participants=old.participants||{};
 old.assignments=old.assignments||{};
 if(!old.participants[key])old.participants[key]={name,joinedAt:Date.now()};
@@ -273,17 +351,17 @@ return old;
 // Compatibility fallback for databases that permit writes to personal records only.
 // The host's live listener will immediately assign newcomers.
 console.warn('Полная транзакция комнаты не разрешена. Используется регистрация с автоматическим распределением ведущим.',transactionError);
-const personRef=ref(db,'rooms/'+roomCode+'/participants/'+key);
+if(room?.registrationOpen===false)throw new Error('Регистрация закрыта.');const personRef=ref(db,'rooms/'+roomCode+'/participants/'+key);
 result=await runTransaction(personRef,prev=>prev===null?{name,joinedAt:Date.now()}:undefined,{applyLocally:false});
 }
-if(!result.committed&&!result.snapshot.exists())throw Error('Регистрация не удалась.');
+if(!result.committed&&!result.snapshot.exists())throw Error('Регистрация закрыта или не удалась.');
 const snap=result.snapshot.val();
 if(snap&&snap.participants){room=snap;renderParticipant();}
 msg($('#participantMessage'),'');
 }catch(e){msg($('#participantMessage'),'Ошибка регистрации: '+e.message)}
 finally{button.disabled=false}
 }
-$('#fullscreen').onclick=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen?.();$('#focusMode').onclick=()=>{document.body.classList.toggle('focus-mode');$('#focusMode').textContent=document.body.classList.contains('focus-mode')?'▣ Вернуть весь экран':'▣ Только результаты';};$('#printBtn').onclick=()=>window.print();$('#toggleReveal').onclick=()=>{covered=!covered;$('#toggleReveal').textContent=covered?'◉ Показать состав':'◉ Скрыть состав';render()};$('#settingsBtn').onclick=()=>$('#settingsModal').classList.remove('hide');$('#closeSettings').onclick=()=>$('#settingsModal').classList.add('hide');$('#connect').onclick=createOnline;$('#demoMode').onclick=()=>{$('#settingsModal').classList.add('hide');setOnline(false);room=null;roomCode='';render()};$('#assign').onclick=assignment;$('#addManual').onclick=()=>manualAdd($('#manualName').value);$('#manualName').addEventListener('keydown',e=>{if(e.key==='Enter')manualAdd($('#manualName').value)});$('#reset').onclick=async()=>{if(!confirm('Удалить всех участников и распределение?'))return;try{await updateRoom({participants:null,assignments:null});if(!online){local.participants={};local.assignments={};render()}msg($('#hostMessage'),'Список очищен.',true)}catch(e){msg($('#hostMessage'),e.message)}};$('#copy').onclick=async()=>{try{await navigator.clipboard.writeText(inviteUrl());msg($('#hostMessage'),'Ссылка скопирована.',true)}catch(e){msg($('#hostMessage'),'Скопируйте ссылку из поля ниже.')}};$('#join').onclick=participantJoin;$('#participantName').addEventListener('keydown',e=>{if(e.key==='Enter')participantJoin()});
-if(isJoin){$('#hostView').classList.add('hide');$('#participantView').classList.remove('hide');joinOnline()}else{const stored=localStorage.getItem('emn-firebase-config');$('#firebaseConfig').value=JSON.stringify(stored?JSON.parse(stored):DEFAULT_FIREBASE_CONFIG,null,2);render();setOnline(false);if(stored&&localStorage.getItem('emn-room'))restoreHost();else createOnline();}
+$('#fullscreen').onclick=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen?.();$('#focusMode').onclick=()=>{document.body.classList.toggle('focus-mode');$('#focusMode').textContent=document.body.classList.contains('focus-mode')?'▣ Вернуть весь экран':'▣ Только результаты';};$('#printBtn').onclick=()=>window.print();$('#toggleReveal').onclick=()=>{covered=!covered;$('#toggleReveal').textContent=covered?'◉ Показать состав':'◉ Скрыть состав';render()};$('#settingsBtn').onclick=()=>$('#settingsModal').classList.remove('hide');$('#closeSettings').onclick=()=>$('#settingsModal').classList.add('hide');$('#connect').onclick=createOnline;$('#demoMode').onclick=()=>{$('#settingsModal').classList.add('hide');setOnline(false);room=null;roomCode='';render()};$('#assign').onclick=assignment;$('#registrationToggle').onclick=async()=>{if(!checkAdmin())return;try{await updateRoom({registrationOpen:room?.registrationOpen===false});msg($('#hostMessage'),'Настройка регистрации сохранена.',true)}catch(e){msg($('#hostMessage'),e.message)}};$('#printQR').onclick=()=>window.open(new URL('?print=qr',location.href).href,'_blank','noopener');$('#addManual').onclick=()=>manualAdd($('#manualName').value);$('#manualName').addEventListener('keydown',e=>{if(e.key==='Enter')manualAdd($('#manualName').value)});$('#reset').onclick=async()=>{if(!confirm('Удалить всех участников и распределение?'))return;try{await updateRoom({participants:null,assignments:null});if(!online){local.participants={};local.assignments={};render()}msg($('#hostMessage'),'Список очищен.',true)}catch(e){msg($('#hostMessage'),e.message)}};$('#copy').onclick=async()=>{try{await navigator.clipboard.writeText(inviteUrl());msg($('#hostMessage'),'Ссылка скопирована.',true)}catch(e){msg($('#hostMessage'),'Скопируйте ссылку из поля ниже.')}};$('#join').onclick=participantJoin;$('#participantName').addEventListener('keydown',e=>{if(e.key==='Enter')participantJoin()});
+if(isPrintQR){document.body.innerHTML='<main class="print-qr-sheet"><h1>Мастер-класс · ЕМН</h1><div id="printQrCode"></div><p>Придумайте псевдоним, отсканируйте код и узнайте свою команду.</p></main>';const draw=()=>{if(!window.QRCode){setTimeout(draw,60);return;}const link=inviteUrl();new window.QRCode(document.getElementById('printQrCode'),{text:link,width:420,height:420,colorDark:'#111111',colorLight:'#ffffff'});};draw();}else if(isJoin){$('#hostView').classList.add('hide');$('#participantView').classList.remove('hide');joinOnline()}else{const stored=localStorage.getItem('emn-firebase-config');$('#firebaseConfig').value=JSON.stringify(stored?JSON.parse(stored):DEFAULT_FIREBASE_CONFIG,null,2);render();setOnline(false);restoreHost();}
 </script>
 </body></html>
